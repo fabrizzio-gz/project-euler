@@ -1,0 +1,8 @@
+000-050/abundant-sums.pkl
+051-075/save60.p
+.vscode/
+Awards/
+*.py~
+000-050/.venv/
+__pycache__/
+#*
