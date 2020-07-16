@@ -6,3 +6,4 @@ Awards/
 000-050/.venv/
 __pycache__/
 #*
+.py#
