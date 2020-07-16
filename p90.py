@@ -32,10 +32,13 @@ def check(die1, die2):
     return True
 
 
-combinations = comb(range(10), 6)
+combinations = list(comb(range(10), 6))
+n = len(combinations)
 count = 0
-for die_1 in combinations:
-    for die_2 in combinations:
+for index1 in range(n):
+    for index2 in range(index1, n):
+        die_1 = combinations[index1]
+        die_2 = combinations[index2]
         if check(die_1, die_2):
             count += 1
 print(count)
