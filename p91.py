@@ -1,9 +1,10 @@
 ##
-# Problem 91
+# Problem 91 (v2)
 ##
 # Finding right triangles inside a nxn (n = 50) grid.
 
 # Idea: Combinatory and brute force.
+
 def vertical_horizontal_sols(n):
     """
     n: grid size.
@@ -23,17 +24,14 @@ def vertical_horizontal_sols(n):
     return 2 * sols
 
 
-def diagonal_sols_ccw(n):
+def diagonal_sols(n):
     """
     n: grid size.
     Returns all possible solutions with diagonal hypothenuse, catheti.
-    Variant with hypothenuse counterclockwise relative to origin
-    cathetus (x1,y1).
     """
     sols = 0
-    # Counting solutions with cathetus1 below diagonal: x1 > y1
     for x1 in range(2, n + 1):
-        for y1 in range(1, x1):
+        for y1 in range(1, n + 1):
             c1 = x1**2 + y1 **2
             for x2 in range(1, x1):
                 for y2 in range(y1 + 1, n + 1):
@@ -73,6 +71,5 @@ sols = 3*n**2
 # (one possible solution every even length)
 sols += n//2 * 2
 sols += vertical_horizontal_sols(n)
-sols += diagonal_sols_ccw(n)
-sols += diagonal_sols_cw(n)
+sols += diagonal_sols(n)
 print(sols)
