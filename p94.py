@@ -70,4 +70,8 @@ def main(limit):
     print(triangles)
     print(total_perimeter)
 
+
+# Command line usage: $python3 p94.py <limit> 
 main(int(sys.argv[1]))
+# Python terminal:
+# main(10**9)
