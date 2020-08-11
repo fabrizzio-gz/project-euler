@@ -10,7 +10,7 @@ import numpy as np
 def get_options(digits):
     """
     digits: A list of 9 digits from 0 to 9.
-    Returrns all digits between 1 and 9 that aren't
+    Returns all digits between 1 and 9 that aren't
     part of digits.
     """
     result = []
@@ -18,49 +18,6 @@ def get_options(digits):
         if n not in digits:
             result.append(n)
     return set(result)
-
-
-def get_column_options(column):
-    """
-    columns: An array of 9 digits (0 - 9)
-    Returns a list of all digits 1-9 that are not part of
-    'coolumn'
-    """
-    return get_options(column)
-
-
-def get_row_options(line):
-    """
-    line: A list of 9 digits corresponding to a 
-    sudoku line.
-    Returns a list of the possible options, that is
-    the digits 1 - 9 that are not present in 'line'.
-    """
-    return get_options(line)
-
-def get_box_options(box):
-    """
-    box: An array of 9 digits (0-9)
-    Returns a list of all digits (1-9) that aren't part
-    of 'box'
-    """
-    return get_options(box)
-
-
-def miss_by_rows(grid):
-    """
-    grid: A 9x9 array
-    Returns a list of lists. One for each row, with
-    the digits not part of the row.
-    """
-    result = []
-    for row in grid:
-        result.append(get_row_options(row))
-    return result
-
-
-def miss_by_columns(grid):
-    return miss_by_rows(grid.transpose())
 
 
 def get_boxes(grid):
@@ -77,7 +34,7 @@ def get_boxes(grid):
     return np.array(boxes)
 
 
-def get_indexes():
+def box_indexes():
     """
     Returns a list of box indexes for each element of the
     9x9 grid.
@@ -92,35 +49,41 @@ def get_indexes():
     return indexes
 
 
-def miss_by_boxes(grid):
-    return miss_by_rows(get_boxes(grid))
-
-
 def get_all_options(grid):
     """
     grid: A 9x9 array.
-    Will return a list of all possible elements for each element.
+    Will return a list of all possible digits free for each case.
+    Assigns empty list for cases already filled.
     """
+
+    def miss_by_rows(grid):
+        result = []
+        for row in grid:
+            result.append(get_options(row))
+        return result
+
+    def miss_by_columns(grid):
+        return miss_by_rows(grid.transpose())
+
+    def miss_by_boxes(grid):
+        return miss_by_rows(get_boxes(grid))
+    
     options_row = miss_by_rows(grid)
     options_col = miss_by_columns(grid)
     options_box = miss_by_boxes(grid)
-    indexes = get_indexes()
+    indexes = box_indexes()
     options = []
     for i in range(9):
         row_options = []
         for j in range(9):
             box_index = indexes[i][j]
-            row_options.append(list(options_row[i] & options_col[j] \
+            if not grid[i][j]:
+                row_options.append(list(options_row[i] & options_col[j] \
                                & options_box[box_index]))
+            else:
+                row_options.append([])
         options.append(row_options)
     return options
-
-
-def is_solved(grid):
-    """
-    Checks if there's any 0 in grid
-    """
-    return np.sum(grid == 0) == 0
 
 
 def is_solution(grid):
@@ -142,7 +105,9 @@ def random_fill(array, values):
     Fills the zeros in array with 'values' in the
     order they appear.
     """
+    array = array.copy()
     array[array == 0] = np.array(values)
+    return array
 
 
 def solve(grid):
@@ -150,6 +115,7 @@ def solve(grid):
     Iterative solution of 9x9 grid by filling
     cases that have only one possible option.
     """
+    grid = grid.copy()
     fills = True
     while fills:
         fills = False
@@ -172,12 +138,14 @@ def sudoku(grid):
     Returns None object otherwise.
     """
     # Attempt simple iterative solution first
-    solution = solve(grid.copy())
+    grid_copy = grid.copy()
+    grid = grid.copy()
+    solution = solve(grid)
     if solution is not None:
         return solution
     # If no solution is found, randomly fill the row/col wit less zeros
     # and try to solve then.
- #   breakpoint()
+    # breakpoint()
     grid_copy = grid.copy()
     row = ''
     col = ''
@@ -189,40 +157,28 @@ def sudoku(grid):
         col = np.argmax(np.sum(grid > 0, axis=0))
     if row:
         #print('Solution through row', row)
-        for row_options in permutations(get_row_options(grid_copy[row])):
-            random_fill(grid_copy[row], row_options)
-            solution = sudoku(grid_copy.copy())
+        for row_options in permutations(get_options(grid_copy[row])):
+            new_row = random_fill(grid[row], row_options)
+            grid[row] = new_row
+            solution = sudoku(grid)
             if solution is not None and is_solution(solution):
                 #print(grid_copy)
                 return solution
             else:
-                grid_copy = grid.copy()
+                grid = grid_copy.copy()
 #    breakpoint()
     if col:
         #print('Solution via col', col)
-        for col_options in permutations(get_column_options(grid_copy[:, col])):
-            random_fill(grid_copy[:, col], col_options)
-            solution = sudoku(grid_copy.copy())
+        for col_options in permutations(get_options(grid_copy[:, col])):
+            new_col = random_fill(grid[:, col], col_options)
+            grid[:, col] = new_col
+            solution = sudoku(grid)
             if solution is not None and is_solution(solution):
                 #print(grid_copy)
                 return solution
             else:
-                grid_copy = grid.copy()
+                grid = grid_copy.copy()
     return None
-
-
-def get_min(grid, options = None):
-    """
-    Returns the minimum length item of options.
-    """
-    if not options:
-        options = get_all_options(grid)
-    min_len = 10
-    for i in range(9):
-        for j in range(9):
-            if len(options[i][j]) < min_len and not grid[i][j]:
-                min_len = len(options[i][j])
-    return min_len
 
 
 grids = []
@@ -239,10 +195,11 @@ with open('p096_sudoku.txt') as file:
         line = file.readline()
     grids.append(np.array(list(map(int, grid))).reshape(9, 9))
 
+#sudoku(grids[2])
 problems = 0
 for index, grid in enumerate(grids):
     print(index)
-    solution = sudoku(grid.copy())
+    solution = sudoku(grid)
     if solution is not None:
         grids[index] = solution
     else:
