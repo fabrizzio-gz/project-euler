@@ -4,8 +4,17 @@
 # Suduku solver
 
 # Idea: Implement algorithm to solve each suduku.
-from itertools import permutations
+# from itertools import permutations
+from copy import deepcopy
 import numpy as np
+
+class NoOptions(Exception):
+    pass
+
+
+class NoSolution(Exception):
+    pass
+
 
 def get_options(digits):
     """
@@ -44,8 +53,7 @@ def box_indexes():
         row = []
         for j in range(9):
             row.append((i//3)*3 + j//3)
-        indexes.append(row)
-    
+        indexes.append(row) 
     return indexes
 
 
@@ -81,7 +89,7 @@ def get_all_options(grid):
                 row_options.append(list(options_row[i] & options_col[j] \
                                & options_box[box_index]))
             else:
-                row_options.append([])
+                row_options.append([grid[i][j]])
         options.append(row_options)
     return options
 
@@ -110,74 +118,89 @@ def random_fill(array, values):
     return array
 
 
-def solve(grid):
+def fill_single_options(grid, options=None, p=False):
     """
-    Iterative solution of 9x9 grid by filling
-    cases that have only one possible option.
+    grid: A 9x9 grid
+    Iteratively fills all single options and
+    returns the filled grid.
     """
     grid = grid.copy()
-    fills = True
-    while fills:
-        fills = False
+    if not options:
         options = get_all_options(grid)
+    any_fill = True
+    while any_fill:
+        any_fill = False
         for i in range(9):
             for j in range(9):
-                if len(options[i][j]) == 1 and not grid[i][j]:
+                if len(options[i][j]) == 1 and grid[i][j] == 0:
+                    if p:
+                        print('Fill!')
                     grid[i][j] = options[i][j][0]
-                    fills = True
-        if is_solution(grid):
-            return grid
-    # No more cases left to fill
-    return None
+                    options = get_all_options(grid)
+                    any_fill = True
+#        options = get_all_options(grid)
+
+    return grid
+
+
+def correct_options(grid):
+    """
+    Will attempt guessing to find impossible options.
+    Returns the corrrected options grid.
+    """
+    def is_wrong(g, i1, i2):
+        g = g.copy()
+        g = fill_single_options(g)
+        o = get_all_options(g)
+        for i in range(9):
+            for j in range(9):
+                if len(o[i][j]) == 0:
+                    #print('Wrong option!')
+                    #print('Option: {} at {}, {}'.format(g[i1][i2], i1, i2))
+                    return True
+        return False
+    corrections = False
+    g = grid.copy()
+    options = get_all_options(g)
+    new_options = deepcopy(options)
+    min_options = 2
+    for i in range(9):
+        for j in range(9):
+            if len(options[i][j]) == min_options:
+                for option in options[i][j]:
+                    if g[i][j] == 0:
+                        g[i][j] = option
+                        if is_wrong(g, i, j):
+                            corrections = True
+                            new_options[i][j].remove(option)
+                        g[i][j] = 0
+    if not corrections:
+        raise NoOptions
+        # print('No corrections')
+    return new_options
 
 
 def sudoku(grid):
     """
-    Will solve the 9x9 grid. Filling zeros with 1-9 digits.
-    Returns the solved sudoku if successful.
-    Returns None object otherwise.
+    grid: A 9x9 sudoku grid.
+    Returns the solved grid.
+    Returns None if can't solve.
     """
-    # Attempt simple iterative solution first
-    grid_copy = grid.copy()
     grid = grid.copy()
-    solution = solve(grid)
-    if solution is not None:
-        return solution
-    # If no solution is found, randomly fill the row/col wit less zeros
-    # and try to solve then.
-    # breakpoint()
-    grid_copy = grid.copy()
-    row = ''
-    col = ''
-    max_row = np.amax(np.sum(grid > 0, axis=1))
-    if max_row != 9:
-        row = np.argmax(np.sum(grid > 0, axis=1))
-    max_col = np.amax(np.sum(grid > 0, axis=0))
-    if max_col != 9:
-        col = np.argmax(np.sum(grid > 0, axis=0))
-    if row:
-        #print('Solution through row', row)
-        for row_options in permutations(get_options(grid_copy[row])):
-            new_row = random_fill(grid[row], row_options)
-            grid[row] = new_row
-            solution = sudoku(grid)
-            if solution is not None and is_solution(solution):
-                #print(grid_copy)
-                return solution
-            else:
-                grid = grid_copy.copy()
-#    breakpoint()
-    if col:
-        #print('Solution via col', col)
-        for col_options in permutations(get_options(grid_copy[:, col])):
-            new_col = random_fill(grid[:, col], col_options)
-            grid[:, col] = new_col
-            solution = sudoku(grid)
-            if solution is not None and is_solution(solution):
-                #print(grid_copy)
-                return solution
-            else:
-                grid = grid_copy.copy()
+    grid = fill_single_options(grid)
+    if is_solution(grid):
+        return grid
+    options = get_all_options(grid)
+    while True:
+        try:
+            options = correct_options(grid)
+            grid = fill_single_options(grid, options)
+#            grid = fill_single_options(grid, options)
+            if is_solution(grid):
+                return grid
+        except NoOptions:
+            break
+    print('No solution')
     return None
 
 
@@ -195,7 +218,16 @@ with open('p096_sudoku.txt') as file:
         line = file.readline()
     grids.append(np.array(list(map(int, grid))).reshape(9, 9))
 
-#sudoku(grids[2])
+grid5 = grids[5]
+grid5 = fill_single_options(grid5)
+g = grid5.copy()
+o = get_all_options(g)
+#sudoku(g)
+
+def pp(options):
+    for row in options:
+        print(row)
+
 problems = 0
 for index, grid in enumerate(grids):
     print(index)
@@ -205,4 +237,75 @@ for index, grid in enumerate(grids):
     else:
         print('Problem with grid {}'.format(index))
         problems +=1
-print(problems)
+print('Problems with {} sudokus'.format(problems))
+
+
+# def solve(grid):
+#     """
+#     Iterative solution of 9x9 grid by filling
+#     cases that have only one possible option.
+#     """
+#     grid = grid.copy()
+#     fills = True
+#     while fills:
+#         fills = False
+#         options = get_all_options(grid)
+#         for i in range(9):
+#             for j in range(9):
+#                 if len(options[i][j]) == 1 and not grid[i][j]:
+#                     grid[i][j] = options[i][j][0]
+#                     fills = True
+#         if is_solution(grid):
+#             return grid
+#     # No more cases left to fill
+#     return None
+
+
+# def sudoku(grid):
+#     """
+#     Will solve the 9x9 grid. Filling zeros with 1-9 digits.
+#     Returns the solved sudoku if successful.
+#     Returns None object otherwise.
+#     """
+#     # Attempt simple iterative solution first
+#     grid_copy = grid.copy()
+#     grid = grid.copy()
+#     solution = solve(grid)
+#     if solution is not None:
+#         return solution
+#     # If no solution is found, randomly fill the row/col wit less zeros
+#     # and try to solve then.
+#     # breakpoint()
+#     grid_copy = grid.copy()
+#     row = ''
+#     col = ''
+#     max_row = np.amax(np.sum(grid > 0, axis=1))
+#     if max_row != 9:
+#         row = np.argmax(np.sum(grid > 0, axis=1))
+#     max_col = np.amax(np.sum(grid > 0, axis=0))
+#     if max_col != 9:
+#         col = np.argmax(np.sum(grid > 0, axis=0))
+#     if row:
+#         #print('Solution through row', row)
+#         for row_options in permutations(get_options(grid_copy[row])):
+#             new_row = random_fill(grid[row], row_options)
+#             grid[row] = new_row
+#             solution = sudoku(grid)
+#             if solution is not None and is_solution(solution):
+#                 #print(grid_copy)
+#                 return solution
+#             else:
+#                 grid = grid_copy.copy()
+# #    breakpoint()
+#     if col:
+#         #print('Solution via col', col)
+#         for col_options in permutations(get_options(grid_copy[:, col])):
+#             new_col = random_fill(grid[:, col], col_options)
+#             grid[:, col] = new_col
+#             solution = sudoku(grid)
+#             if solution is not None and is_solution(solution):
+#                 #print(grid_copy)
+#                 return solution
+#             else:
+#                 grid = grid_copy.copy()
+#     return None
