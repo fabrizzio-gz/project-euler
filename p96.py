@@ -8,6 +8,7 @@
 from copy import deepcopy
 import numpy as np
 
+
 class NoOptions(Exception):
     pass
 
@@ -189,6 +190,9 @@ def sudoku(grid):
     Returns the solved grid.
     Returns None if can't solve.
     """
+    def top3_filled(grid):
+        return grid[0][0] != 0 and grid[0][1] != 0 and grid[0][2] != 0
+
     grid = grid.copy()
     grid = fill_single_options(grid)
     if is_solution(grid):
@@ -199,16 +203,20 @@ def sudoku(grid):
             options = correct_options(grid)
             grid = fill_single_options(grid, options)
 #            grid = fill_single_options(grid, options)
-            if is_solution(grid):
+            if top3_filled(grid) or is_solution(grid):
                 return grid
         except NoOptions:
             break
     while True:
         try:
-            options = correct_options(grid, 9)
+            new_options = correct_options(grid, 9)
+            if new_options == options:
+                break
+            else:
+                options = new_options
             grid = fill_single_options(grid, options)
 #            grid = fill_single_options(grid, options)
-            if is_solution(grid):
+            if top3_filled(grid) or is_solution(grid):
                 return grid
         except NoOptions:
             break
@@ -230,19 +238,20 @@ with open('p096_sudoku.txt') as file:
         line = file.readline()
     grids.append(np.array(list(map(int, grid))).reshape(9, 9))
 
-# p96-grids5
-# grid5 = grids[5]
-# grid5 = fill_single_options(grid5)
-# g = grid5.copy()
-# o = get_all_options(g)
-#sudoku(g)
+#p96-grids9
+grid9 = grids[9]
+grid9 = fill_single_options(grid9)
+g = grid9.copy()
+o = get_all_options(g)
+
 
 def pp(options):
     for row in options:
         print(row)
 
 problems = 0
-loops = [9, 13, 25, 28, 43, 45, 46, 48]
+#loops = [5, 9, 13, 25, 28, 43, 45, 46, 48]
+loops = []
 for index, grid in enumerate(grids):
     if index not in loops:
         print(index)
