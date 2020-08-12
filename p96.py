@@ -4,16 +4,12 @@
 # Suduku solver
 
 # Idea: Implement algorithm to solve each suduku.
-# from itertools import permutations
 from copy import deepcopy
+from time import time
 import numpy as np
 
 
 class NoOptions(Exception):
-    pass
-
-
-class NoSolution(Exception):
     pass
 
 
@@ -64,7 +60,6 @@ def get_all_options(grid):
     Will return a list of all possible digits free for each case.
     Assigns empty list for cases already filled.
     """
-
     def miss_by_rows(grid):
         result = []
         for row in grid:
@@ -76,7 +71,7 @@ def get_all_options(grid):
 
     def miss_by_boxes(grid):
         return miss_by_rows(get_boxes(grid))
-    
+
     options_row = miss_by_rows(grid)
     options_col = miss_by_columns(grid)
     options_box = miss_by_boxes(grid)
@@ -87,8 +82,8 @@ def get_all_options(grid):
         for j in range(9):
             box_index = indexes[i][j]
             if not grid[i][j]:
-                row_options.append(list(options_row[i] & options_col[j] \
-                               & options_box[box_index]))
+                row_options.append(list(options_row[i] & options_col[j] &
+                                        options_box[box_index]))
             else:
                 row_options.append([grid[i][j]])
         options.append(row_options)
@@ -105,18 +100,6 @@ def is_solution(grid):
        np.all(np.sum(get_boxes(grid), axis=1) == 45):
         return True
     return False
-
-
-def random_fill(array, values):
-    """
-    array: An array of 9 digits linked to a grid.
-    values: tuple of digits 1-9
-    Fills the zeros in array with 'values' in the
-    order they appear.
-    """
-    array = array.copy()
-    array[array == 0] = np.array(values)
-    return array
 
 
 def fill_single_options(grid, options=None, p=False):
@@ -139,12 +122,11 @@ def fill_single_options(grid, options=None, p=False):
                     grid[i][j] = options[i][j][0]
                     options = get_all_options(grid)
                     any_fill = True
-#        options = get_all_options(grid)
 
     return grid
 
 
-def correct_options(grid, min_options=2):
+def correct_options(grid, options=None, min_options=2):
     """
     min_options: upper limit to test case options.
     Will attempt guessing to find impossible options.
@@ -161,11 +143,12 @@ def correct_options(grid, min_options=2):
                     #print('Option: {} at {}, {}'.format(g[i1][i2], i1, i2))
                     return True
         return False
+    if not options:
+        options = get_all_options(g)
     if not min_options:
         min_options = 2
     corrections = False
     g = grid.copy()
-    options = get_all_options(g)
     new_options = deepcopy(options)
     for min_options in range(2, min_options + 1):
         for i in range(9):
@@ -178,9 +161,10 @@ def correct_options(grid, min_options=2):
                                 corrections = True
                                 new_options[i][j].remove(option)
                             g[i][j] = 0
+
     if not corrections:
         raise NoOptions
-        # print('No corrections')
+
     return new_options
 
 
@@ -190,9 +174,6 @@ def sudoku(grid):
     Returns the solved grid.
     Returns None if can't solve.
     """
-    def top3_filled(grid):
-        return grid[0][0] != 0 and grid[0][1] != 0 and grid[0][2] != 0
-
     grid = grid.copy()
     grid = fill_single_options(grid)
     if is_solution(grid):
@@ -200,27 +181,32 @@ def sudoku(grid):
     options = get_all_options(grid)
     while True:
         try:
-            options = correct_options(grid)
+            options = correct_options(grid, options)
             grid = fill_single_options(grid, options)
-#            grid = fill_single_options(grid, options)
-            if top3_filled(grid) or is_solution(grid):
+            grid = fill_single_options(grid, options)
+            if is_solution(grid):
                 return grid
         except NoOptions:
             break
     while True:
         try:
-            new_options = correct_options(grid, 9)
-            if new_options == options:
-                break
-            else:
-                options = new_options
+            options = correct_options(grid, options, 9)
             grid = fill_single_options(grid, options)
-#            grid = fill_single_options(grid, options)
-            if top3_filled(grid) or is_solution(grid):
+            grid = fill_single_options(grid, options)
+            if is_solution(grid):
                 return grid
         except NoOptions:
             break
-    print('No solution')
+    for i in range(9):
+        for j in range(9):
+            if len(options[i][j]) == 2:
+                for option in options[i][j]:
+                    guess = grid.copy()
+                    guess[i][j] = option
+                    solution = sudoku(guess)
+                    if solution is not None:
+                        return solution
+    #print('No solution')
     return None
 
 
@@ -238,27 +224,11 @@ with open('p096_sudoku.txt') as file:
         line = file.readline()
     grids.append(np.array(list(map(int, grid))).reshape(9, 9))
 
-#p96-grids9
-grid9 = grids[9]
-grid9 = fill_single_options(grid9)
-g = grid9.copy()
-o = get_all_options(g)
-
-
-def pp(options):
-    for row in options:
-        print(row)
-
-problems = 0
-#loops = [5, 9, 13, 25, 28, 43, 45, 46, 48]
-loops = []
+start = time()
+sums = 0
 for index, grid in enumerate(grids):
-    if index not in loops:
-        print(index)
-        solution = sudoku(grid)
-        if solution is not None:
-            grids[index] = solution
-        else:
-            print('Problem with grid {}'.format(index))
-            problems +=1
-print('Problems with {} sudokus'.format(problems))
+    grid = sudoku(grid)
+    grids[index] = grid
+    sums += grid[0][0] * 100 + grid[0][1] * 10 + grid[0][2]
+print('The answer is', sums)
+print('Elpased: {}'.format(round(time() - start, 2)))
