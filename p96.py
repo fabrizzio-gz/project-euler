@@ -245,7 +245,8 @@ problems = 0
 loops = [9, 13, 25, 28, 43, 45, 46, 48]
 for index, grid in enumerate(grids):
     if index not in loops:
-        print(index)        solution = sudoku(grid)
+        print(index)
+        solution = sudoku(grid)
         if solution is not None:
             grids[index] = solution
         else:
