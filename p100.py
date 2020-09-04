@@ -2,35 +2,23 @@
 # Problem 100
 ##
 
-# Finding arrangement with more than 10**12 balls with 50%
-# probability of getting a red ball.
+# Transforming the probability r*r-1 / t*t-1
+# Into Pell's equation: x² - 2y² = 1
+# With r = x + 1 / 2, t = 2 * y - 1
+from math import sqrt
 
-def get_prob(total, red):
-    return (red * (red - 1), total * (total - 1))
+
+def expand_solutions(x, y):
+    return (3*x + 4*y, 2*x + 3*y) 
 
 
-#breakpoint()
-total = 20
-while True:
-    #print(total)
-    red = int(20 * 
-    num, denom = get_prob(total, red)
-    
-    if 2*num == denom:
-        print(total, red)
-    else:
-        if 2*num > denom:
-            f = lambda x: x - 1
-            cond = lambda num, denom: 2*num > denom
-        else:
-            f = lambda x: x + 1
-            cond = lambda num, denom: 2*num < denom
-        red = f(red)
+def get_balls(x, y):
+    return ((x+1)/2 , (y+1)/2)
 
-        while cond(num, denom):
-            num, denom = get_prob(total, red)
-            if num * 2 == denom:
-                print(total, red)
-            red = f(red)
-
-    total += 1
+x = 1
+y = 1
+t, r = 0, 0
+while t < 10**12:
+    x, y = expand_solutions(x, y)
+    t, r = get_balls(x, y)
+    print(t, r)
