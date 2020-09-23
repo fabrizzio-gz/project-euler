@@ -82,4 +82,4 @@ def special_sumset(size):
         if verify(set_):
             return set_
 
-special_sumset(7)
+# special_sumset(7)
